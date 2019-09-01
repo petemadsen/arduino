@@ -3,7 +3,7 @@
 #include <RF24.h>
 
 
-RF24 radio(38, 39); // Define radio (CE-PIN,CSN-PIN)
+RF24 radio(28, 29); // Define radio (CE-PIN,CSN-PIN)
 const byte rxAddr[6] = "00001"; // RX adress (Same as on TX)
 String received_data;
 

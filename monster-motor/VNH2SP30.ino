@@ -3,6 +3,8 @@
 #define CCW  2
 #define BRAKEGND 3
 #define CS_THRESHOLD 100
+
+
 /*  VNH2SP30 pin definitions xxx[0] controls '1' outputs xxx[1] controls '2' outputs */
 int inApin[2] = {7, 4};  // INA: Clockwise input
 int inBpin[2] = {8, 9}; // INB: Counter‐clockwise input
@@ -14,30 +16,52 @@ int enpin[2] = {0, 1}; // EN: Status of switches output (Analog pin)
 int statpin = 13;
 
 
+void motorOff(int motor);
+void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm);
+
+
+
 
 void VNH2SP30_begin()
 {
 	pinMode(statpin, OUTPUT);  // Initialize digital pins as outputs
 
-	for (int i=0; i<2; i++)  {
+	for (int i=0; i<2; i++)
+	{
 		pinMode(inApin[i], OUTPUT);
 		pinMode(inBpin[i], OUTPUT);
 		pinMode(pwmpin[i], OUTPUT);
 	}
 
 	// Initialize braked  
-	for (int i=0; i<2; i++)  {
+	for (int i=0; i<2; i++)
+	{
 		digitalWrite(inApin[i], LOW);
 		digitalWrite(inBpin[i], LOW);
 	}
 	
+#if 0
 	// motorGo(0, CW, 1023);  // motorGo(1, CCW, 1023);}
+
+	motorGo(0, CW, 128);
+	delay(2 * 1000);
+	motorOff(0);
+
+	motorGo(1, CW, 128);
+	delay(2 * 1000);
+	motorOff(0);
+
+	motorGo(0, CCW, 128);
+	delay(2 * 1000);
+	motorOff(0);
+
+	motorGo(1, CCW, 128);
+	delay(2 * 1000);
+	motorOff(0);
+#endif
+	Serial.println("--VNH2SP30--ready--");
 }
 
-
-
-void motorOff(int motor);
-void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm);
 
 
 int speed = 50;

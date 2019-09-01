@@ -1,4 +1,5 @@
 static int m_motor_speed = 0;
+static int m_motor_direction = CW;
 
 
 void motor_speed(int speed)
@@ -13,6 +14,22 @@ void motor_speed(int speed)
 	m_motor_speed = speed;
 
 	// TODO PWM to motor
+	if (m_motor_speed == 0)
+	{
+		motorOff(0);
+		motorOff(1);
+		delay(100);
+	}
+	else
+	{
+		int s = map(m_motor_speed, 0, 10, 0, 125);
+		Serial.print(m_motor_speed);
+		Serial.print(" =s> ");
+		Serial.println(s);
+		motorGo(0, m_motor_direction, s);
+		motorGo(1, m_motor_direction, s);
+		delay(100);
+	}
 }
 
 
@@ -26,6 +43,7 @@ void motor_forward()
 	}
 
 	// TODO set pins
+	m_motor_direction = CCW;
 }
 
 
@@ -39,4 +57,5 @@ void motor_backward()
 	}
 
 	// TODO set pins
+	m_motor_direction = CW;
 }

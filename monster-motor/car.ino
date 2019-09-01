@@ -138,14 +138,14 @@ static void car_speed_slow(int slow)
 
 static void car_throttle_down(int pressed)
 {
-	if (pressed)
+	if (pressed && car_throttle == 0)
 	{
 		my_log("THROTTLE");
 		car_throttle = 1;
 		if (car_direction != 0)
 			car_motors_on();
 	}
-	else
+	else if (!pressed && car_throttle == 1)
 	{
 		my_log("STOP");
 		car_throttle = 0;
