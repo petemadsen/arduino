@@ -1,3 +1,13 @@
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+
+RF24 radio(38, 39); // Define radio (CE-PIN,CSN-PIN)
+const byte rxAddr[6] = "00001"; // RX adress (Same as on TX)
+String received_data;
+
+
 void setup()
 {
 	Serial.begin(115200);
@@ -5,6 +15,12 @@ void setup()
 
 	Serial.println("--init");
 	VNH2SP30_begin();
+
+	radio.begin();
+	radio.setPALevel(RF24_PA_LOW); // Transmit Power (MAX,HIGH,LOW,MIN)
+	radio.setDataRate(RF24_250KBPS); //Transmit Speeed (250 Kbits)
+	radio.openReadingPipe(0, rxAddr);
+	radio.startListening();
 
 	Serial.println("--ready");
 }
@@ -20,6 +36,19 @@ void loop()
 		uint8_t ch = Serial3.read();
 		Serial.print((char)ch);
 		parse(ch);
+	}
+
+	if (radio.available())
+	{
+		char text[100] = {0};
+		radio.read(&text, sizeof(text));
+		received_data = String(text);
+
+//		Serial.print("--radio--received--");
+//		Serial.println(received_data);
+
+		parse(text[0]);
+		parse(text[1]);
 	}
 }
 
