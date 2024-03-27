@@ -10,12 +10,12 @@ const int GREEN = 6;
 const int WIRE = 3;
 const int BUZZER = 2;
 
-const int MAX_RUN_SECS = 180;
+int MAX_RUN_SECS = 180;
 
 bool running = false;
 unsigned long started = 0L;
 unsigned long running_update = 0L;
-int running_secs = 0;
+int secs_remaining = 0;
 // set when game finishes - used to do a proper screen swap when GREEN pressed
 bool over = false;
 
@@ -59,13 +59,13 @@ void game_lost()
 	running = false;
 	over = true;
 
-	digitalWrite(BUZZER, HIGH);
-	delay(100);
-	digitalWrite(BUZZER, LOW);
-	delay(100);
-	digitalWrite(BUZZER, HIGH);
-	delay(100);
-	digitalWrite(BUZZER, LOW);
+	for (int i = 0; i < 3; ++i)
+	{
+		digitalWrite(BUZZER, HIGH);
+		delay(200);
+		digitalWrite(BUZZER, LOW);
+		delay(200);
+	}
 
 	uView.clear(PAGE);
 	uView.setFontType(1);
@@ -114,7 +114,7 @@ void game_run()
 
 	started = millis();
 	running_update = 0L;
-	running_secs = 0L;
+	secs_remaining = MAX_RUN_SECS;
 }
 
 void game_running()
@@ -128,15 +128,15 @@ void game_running()
 	uView.setCursor(0, 0);
 	uView.setFontType(1);
 	uView.print("Los:");
-	uView.print(running_secs);
-	if (running_secs % 2)
+	uView.print(secs_remaining);
+	if (secs_remaining % 2)
 		uView.circleFill(32, 30, 10, WHITE, NORM);
 	else
 		uView.circle(32, 30, 10, WHITE, NORM);
 	uView.display();
 
-	running_secs += 1;
-	if (running_secs > MAX_RUN_SECS)
+	secs_remaining -= 1;
+	if (secs_remaining < 0)
 		game_lost();
 }
 

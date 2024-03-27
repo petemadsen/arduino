@@ -2,8 +2,9 @@
 #include <SPI.h>
 //imports the Gamebuino library
 #include <Gamebuino.h>
-//creates a Gamebuino object named gb
+#include "gb_emu.h"
 Gamebuino gb;
+//GbEmu gb;
 
 #include <Wire.h>
 
@@ -11,14 +12,17 @@ Gamebuino gb;
 // the setup routine runs once when Gamebuino starts up
 void setup()
 {
-  Wire.begin();
+  Serial.begin(9600);
   
   // initialize the Gamebuino object
   gb.begin();
-  gb.battery.show = true;
+  //gb.battery.show = true;
   //display the main menu:
-  gb.titleScreen(F("My first game"));
-  gb.popup(F("Let's go!"), 100);
+  gb.titleScreen(F("My arobot game"));
+  //gb.popup(F("Let's go!"), 100);
+
+
+  Wire.begin();
 }
 
 
@@ -29,26 +33,10 @@ byte i2c_devices[I2C_MAX];
 // the loop routine runs over and over again forever
 void loop()
 {
-  /*
-  int addr = 0x12;
-  Wire.requestFrom(addr, 1);
-  while (Wire.available())
-  {
-    char c = Wire.read();
-    gb.
-  }
-  */
-
-
-
-
-
-  
-  
   //updates the gamebuino (the display, the sound, the auto backlight... everything)
   //returns true when it's time to render a new frame (20 times/second)
   if (gb.update())
-  {
+  {      
     //prints Hello World! on the screen
     gb.display.println(F("Hello World!"));
     //declare a variable named count of type integer :
@@ -58,29 +46,24 @@ void loop()
     //prints the variable "count"
     gb.display.println(count);
 
-
-    for (int addr = 0; addr < i2c_found; ++addr)
+#if 1
+    i2c_found = 0;
+    for (int addr = 0x0; addr < 0x10; ++addr)
     {
-    }
-    gb.display.print(F("i2c found "));
-    gb.display.println(i2c_found);
-
-    return;
-  }
-
-
-
-  i2c_found = 0;
-  for (int addr = 0x40; addr < 0x41; ++addr)
-  {
-    Wire.beginTransmission(addr);
-    byte error = Wire.endTransmission();
-    if (error == 0)
-    {
-      i2c_found += 1;
+      Wire.beginTransmission(addr);
+      byte error = Wire.endTransmission();
+      if (error == 0)
+      {
+        i2c_found += 1;
+        gb.display.print(F("dev: "));
+        gb.display.println(addr);
       //Serial.print(F("Found: "));
       //Serial.println(addr, HEX);
+      }
     }
+    gb.display.print(F("i2c found: "));
+    gb.display.println(i2c_found);
+    Serial.println(F("<<done"));
+#endif
   }
-  //Serial.println(F("<<done"));
 }
