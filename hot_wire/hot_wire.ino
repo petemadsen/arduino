@@ -7,8 +7,12 @@
 
 const int RED = 5;
 const int GREEN = 6;
-const int WIRE = 3;
+const int CONTROL = 3;
 const int BUZZER = 2;
+
+const int WIRE = A2;
+const int RIGHT = A3;
+const int LEFT = A4;
 
 int MAX_RUN_SECS = 180;
 
@@ -23,8 +27,15 @@ void setup()
 {
 	pinMode(RED, INPUT);
 	pinMode(GREEN, INPUT);
-	pinMode(WIRE, INPUT);
+	pinMode(WIRE, INPUT_PULLUP);
+	pinMode(RIGHT, INPUT_PULLUP);
+	pinMode(LEFT, INPUT_PULLUP);
+
+	pinMode(CONTROL, OUTPUT);
 	pinMode(BUZZER, OUTPUT);
+
+	digitalWrite(CONTROL, LOW);
+	digitalWrite(BUZZER, LOW);
 
 	Serial.begin(9600);
 
@@ -140,11 +151,11 @@ void game_running()
 		game_lost();
 }
 
-bool read_button(int key)
+bool read_button(int key, int default_state)
 {
-	if (digitalRead(key))
+	if (digitalRead(key) != default_state)
 	{
-		while (digitalRead(key))
+		while (digitalRead(key) != default_state)
 			delay(50);
 		return true;
 	}
@@ -154,20 +165,28 @@ bool read_button(int key)
 
 void loop()
 {
+	if (read_button(WIRE, HIGH))
+		Serial.println("--wire");
+	if (read_button(LEFT, HIGH))
+		Serial.println("--left");
+	if (read_button(RIGHT, HIGH))
+		Serial.println("--right");
+	return;
+
 	if (running)
 	{
-		if (read_button(WIRE))
+		if (read_button(WIRE, HIGH))
 			game_lost();
 		// else if (read_button(GREEN))
 		// 	game_won();
-		else if (read_button(RED))
+		else if (read_button(RED, LOW))
 			game_cancel();
 		else
 			game_running();
 	}
 	else
 	{
-		if (read_button(GREEN))
+		if (read_button(GREEN, LOW))
 		{
 			Serial.println("GREEN");
 			if (over)
