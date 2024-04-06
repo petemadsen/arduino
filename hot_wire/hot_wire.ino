@@ -1,9 +1,10 @@
 /****************************************************************************
  *
+ * RUN:
  * * Select Arduino Uno as board
  *
  * TODO:
- * * Add buzzer beep when close to end
+ * * Nothing
  *
  **/
 #include <MicroView.h>
@@ -32,6 +33,10 @@ unsigned long running_last_update = 0L;
 const int INIT_RUN_SECS = 90;
 int max_run_secs = INIT_RUN_SECS;
 int secs_remaining = 0;
+
+#define SMILEY_WON 0
+#define SMILEY_LOST 1
+#define SMILEY_ABORTED 2
 
 void setup()
 {
@@ -82,8 +87,11 @@ void game_splash()
 	delay(1000);
 	digitalWrite(LED_RED, LOW);
 
+	smiley(32, 38, 9, SMILEY_WON);
+	delay(3 * 1000);
+
 	beep();
-	delay(1 * 1000);
+
 	_game_state = GAME_SELECT;
 }
 
@@ -214,27 +222,17 @@ void game_running_tick()
 	secs_remaining -= 1;
 }
 
-void game_lost()
-{
-	Serial.println("LOST");
-
-	uView.clear(PAGE);
-	uView.setFontType(1);
-	uView.setCursor(0, 0);
-	uView.print("SCHADE!");
-	uView.circleFill(32, 30, 10, WHITE, NORM);
-	uView.display();
-
-	digitalWrite(BUZZER, HIGH);
-	delay(2000);
-	digitalWrite(BUZZER, LOW);
-
-	wait_for_green_button_and_game_select();
-}
-
 void game_won()
 {
 	Serial.println("WON");
+
+	uView.clear(PAGE);
+	uView.setCursor(0, 0);
+	uView.setFontType(1);
+	uView.print("G U T !");
+	uView.display();
+
+	smiley(32, 30, 16, SMILEY_WON);
 
 	digitalWrite(BUZZER, HIGH);
 	delay(100);
@@ -244,12 +242,24 @@ void game_won()
 	delay(1000);
 	digitalWrite(BUZZER, LOW);
 
+	wait_for_green_button_and_game_select();
+}
+
+void game_lost()
+{
+	Serial.println("LOST");
+
 	uView.clear(PAGE);
-	uView.setCursor(0, 0);
 	uView.setFontType(1);
-	uView.print("G U T !");
-	uView.circleFill(32, 30, 10, WHITE, NORM);
+	uView.setCursor(0, 0);
+	uView.print("SCHADE!");
 	uView.display();
+
+	smiley(32, 30, 16, SMILEY_LOST);
+
+	digitalWrite(BUZZER, HIGH);
+	delay(2000);
+	digitalWrite(BUZZER, LOW);
 
 	wait_for_green_button_and_game_select();
 }
@@ -258,6 +268,14 @@ void game_aborted()
 {
 	Serial.println("ABORTED");
 
+	uView.clear(PAGE);
+	uView.setCursor(0, 0);
+	uView.setFontType(1);
+	uView.print(" STOP");
+	uView.display();
+
+	smiley(32, 30, 16, SMILEY_ABORTED);
+
 	for (int i = 0; i < 1; ++i)
 	{
 		digitalWrite(BUZZER, HIGH);
@@ -265,13 +283,6 @@ void game_aborted()
 		digitalWrite(BUZZER, LOW);
 		delay(200);
 	}
-
-	uView.clear(PAGE);
-	uView.setCursor(0, 0);
-	uView.setFontType(1);
-	uView.print(" STOP");
-	uView.circleFill(32, 30, 10, WHITE, NORM);
-	uView.display();
 
 	wait_for_green_button_and_game_select();
 }
@@ -328,4 +339,44 @@ void beep()
 	digitalWrite(BUZZER, HIGH);
 	delay(100);
 	digitalWrite(BUZZER, LOW);
+}
+
+void smiley(const uint8_t x, const uint8_t y, const uint8_t size, const uint8_t type)
+{
+	const uint8_t eye_size = size / 4;
+	const uint8_t mouth_height = y + 2 * eye_size;
+
+	// face
+	uView.circle(x, y, size, WHITE, NORM);
+	// left eye
+	uView.circle(x - 2 * eye_size, y - 2, eye_size, WHITE, NORM);
+	// right eye
+	uView.circle(x + 2 * eye_size, y - 2, eye_size, WHITE, NORM);
+	// mouth
+	uView.line(x - 2 * eye_size, mouth_height, x + 2 * eye_size, mouth_height);
+	if (type == SMILEY_WON)
+	{
+		uView.pixel(x - 2 * eye_size - 1, mouth_height - 1);
+		uView.pixel(x + 2 * eye_size, mouth_height - 1);
+	}
+	else if (type == SMILEY_LOST)
+	{
+		uView.pixel(x - 2 * eye_size - 1, mouth_height + 1);
+		uView.pixel(x + 2 * eye_size, mouth_height + 1);
+	}
+	//
+	uView.display();
+
+	if (type == SMILEY_WON)
+	{
+		// wink - close right eye
+		delay(1000);
+		uView.circleFill(x + 2 * eye_size, y - 2, eye_size, WHITE, NORM);
+		uView.display();
+		// open right eye
+		delay(500);
+		uView.circleFill(x + 2 * eye_size, y - 2, eye_size, BLACK, NORM);
+		uView.circle(x + 2 * eye_size, y - 2, eye_size, WHITE, NORM);
+		uView.display();
+	}
 }
