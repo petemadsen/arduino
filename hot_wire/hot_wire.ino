@@ -26,6 +26,7 @@ const int POLE_LEFT = A4;
 #define GAME_WON 3
 #define GAME_LOST 4
 #define GAME_ABORTED 5
+#define GAME_IDLE 6
 int _game_state = GAME_SPLASH;
 int pole_to_win = WIRE;
 
@@ -34,6 +35,7 @@ const int INIT_RUN_SECS = 90;
 int max_run_secs = INIT_RUN_SECS;
 int secs_remaining = 0;
 
+#define SMILEY_NUM_TYPES 3
 #define SMILEY_WON 0
 #define SMILEY_LOST 1
 #define SMILEY_ABORTED 2
@@ -82,12 +84,12 @@ void game_splash()
 	delay(1000);
 	digitalWrite(LED_GREEN, LOW);
 	digitalWrite(LED_RED, HIGH);
-	uView.println("Spieler");
+	uView.println("Du");
 	uView.display();
 	delay(1000);
 	digitalWrite(LED_RED, LOW);
 
-	smiley(32, 38, 9, SMILEY_WON);
+	smiley(32, 38, 9, SMILEY_WON, true);
 	delay(3 * 1000);
 
 	beep();
@@ -229,10 +231,10 @@ void game_won()
 	uView.clear(PAGE);
 	uView.setCursor(0, 0);
 	uView.setFontType(1);
-	uView.print("G U T !");
+	uView.print("SUPER");
 	uView.display();
 
-	smiley(32, 30, 16, SMILEY_WON);
+	smiley(32, 30, 16, SMILEY_WON, true);
 
 	digitalWrite(BUZZER, HIGH);
 	delay(100);
@@ -252,10 +254,10 @@ void game_lost()
 	uView.clear(PAGE);
 	uView.setFontType(1);
 	uView.setCursor(0, 0);
-	uView.print("SCHADE!");
+	uView.print("SCHADE");
 	uView.display();
 
-	smiley(32, 30, 16, SMILEY_LOST);
+	smiley(32, 30, 16, SMILEY_LOST, false);
 
 	digitalWrite(BUZZER, HIGH);
 	delay(2000);
@@ -271,10 +273,10 @@ void game_aborted()
 	uView.clear(PAGE);
 	uView.setCursor(0, 0);
 	uView.setFontType(1);
-	uView.print(" STOP");
+	uView.print("NA GUT");
 	uView.display();
 
-	smiley(32, 30, 16, SMILEY_ABORTED);
+	smiley(32, 30, 16, SMILEY_ABORTED, false);
 
 	for (int i = 0; i < 1; ++i)
 	{
@@ -287,17 +289,58 @@ void game_aborted()
 	wait_for_green_button_and_game_select();
 }
 
-// Checks if button is pressed and waits for it to be released.
-bool read_button(int key, int default_state)
+void game_idle()
 {
-	if (digitalRead(key) != default_state)
+	digitalWrite(LED_GREEN, HIGH);
+
+	uint8_t x = uView.getLCDWidth() / 2;
+	uint8_t y = uView.getLCDHeight() / 2;
+	uint8_t s = 10;
+	uint8_t t = 0;
+
+	uint8_t dx = 1;
+	uint8_t dy = 1;
+
+	unsigned long last_update = millis();
+
+	while (!read_button(BUTTON_GREEN, LOW))
 	{
-		while (digitalRead(key) != default_state)
-			delay(50);
-		return true;
+		unsigned long now = millis();
+		if ((now - last_update) < 100)
+			continue;
+		last_update = now;
+
+		x += dx;
+		if ((x + s + 1) >= uView.getLCDWidth())
+		{
+			dx = -1;
+			t = (t + 1) % SMILEY_NUM_TYPES;
+		}
+		else if ((x - s) <= 0)
+		{
+			dx = +1;
+			t = (t + 1) % SMILEY_NUM_TYPES;
+		}
+
+		y += dy;
+		if ((y + s + 1) >= uView.getLCDHeight())
+		{
+			dy = -1;
+			t = (t + 1) % SMILEY_NUM_TYPES;
+		}
+		else if ((y - s) <= 0)
+		{
+			dy = +1;
+			t = (t + 1) % SMILEY_NUM_TYPES;
+		}
+
+		uView.clear(PAGE);
+		smiley(x, y, s, t, false);
 	}
 
-	return false;
+	digitalWrite(LED_GREEN, LOW);
+
+	_game_state = GAME_SELECT;
 }
 
 void loop()
@@ -322,15 +365,41 @@ void loop()
 	case GAME_ABORTED:
 		game_aborted();
 		break;
+	case GAME_IDLE:
+		game_idle();
+		break;
 	}
+}
+
+// Checks if button is pressed and waits for it to be released.
+bool read_button(int key, int default_state)
+{
+	if (digitalRead(key) != default_state)
+	{
+		while (digitalRead(key) != default_state)
+			delay(50);
+		return true;
+	}
+
+	return false;
 }
 
 void wait_for_green_button_and_game_select()
 {
+	Serial.println("IDLE");
+	unsigned long started = millis();
+
 	// Wait for green button to be pressed
 	digitalWrite(LED_GREEN, HIGH);
+	// FIXME: Do we need to turn GREEN off???
 	while (!read_button(BUTTON_GREEN, LOW))
-		;
+	{
+		if ((millis() - started) > 10L * 1000L)
+		{
+			_game_state = GAME_IDLE;
+			return;
+		}
+	}
 	_game_state = GAME_SELECT;
 }
 
@@ -341,7 +410,7 @@ void beep()
 	digitalWrite(BUZZER, LOW);
 }
 
-void smiley(const uint8_t x, const uint8_t y, const uint8_t size, const uint8_t type)
+void smiley(const uint8_t x, const uint8_t y, const uint8_t size, const uint8_t type, bool wink)
 {
 	const uint8_t eye_size = size / 4;
 	const uint8_t mouth_height = y + 2 * eye_size;
@@ -367,7 +436,7 @@ void smiley(const uint8_t x, const uint8_t y, const uint8_t size, const uint8_t 
 	//
 	uView.display();
 
-	if (type == SMILEY_WON)
+	if (wink)
 	{
 		// wink - close right eye
 		delay(1000);
