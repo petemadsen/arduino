@@ -105,10 +105,16 @@ void game_select()
 	digitalWrite(LED_RED, HIGH);
 
 	game_select_redraw();
+	idle_reset();
 
 	// wait for left/right pole decision
 	while (pole_to_win != POLE_LEFT && pole_to_win != POLE_RIGHT)
 	{
+		if (idle_true())
+		{
+			_game_state = GAME_IDLE;
+			return;
+		}
 		if (read_button(POLE_LEFT, HIGH))
 		{
 			Serial.println("POLE_LEFT");
@@ -121,6 +127,7 @@ void game_select()
 		}
 		if (read_button(BUTTON_GREEN, LOW))
 		{
+			idle_reset();
 			if (max_run_secs > 30)
 			{
 				max_run_secs -= 30;
@@ -129,6 +136,7 @@ void game_select()
 		}
 		if (read_button(BUTTON_RED, LOW))
 		{
+			idle_reset();
 			if (max_run_secs < 180)
 			{
 				max_run_secs += 30;
@@ -234,7 +242,7 @@ void game_won()
 	uView.print("SUPER");
 	uView.display();
 
-	smiley(32, 30, 16, SMILEY_WON, true);
+	smiley(32, 30, 16, SMILEY_WON, false);
 
 	digitalWrite(BUZZER, HIGH);
 	delay(100);
@@ -243,6 +251,8 @@ void game_won()
 	digitalWrite(BUZZER, HIGH);
 	delay(1000);
 	digitalWrite(BUZZER, LOW);
+
+	smiley(32, 30, 16, SMILEY_WON, true);
 
 	wait_for_green_button_and_game_select();
 }
@@ -292,6 +302,7 @@ void game_aborted()
 void game_idle()
 {
 	digitalWrite(LED_GREEN, HIGH);
+	digitalWrite(LED_RED, LOW);
 
 	uint8_t x = uView.getLCDWidth() / 2;
 	uint8_t y = uView.getLCDHeight() / 2;
@@ -306,7 +317,7 @@ void game_idle()
 	while (!read_button(BUTTON_GREEN, LOW))
 	{
 		unsigned long now = millis();
-		if ((now - last_update) < 100)
+		if ((now - last_update) < 50)
 			continue;
 		last_update = now;
 
@@ -337,8 +348,6 @@ void game_idle()
 		uView.clear(PAGE);
 		smiley(x, y, s, t, false);
 	}
-
-	digitalWrite(LED_GREEN, LOW);
 
 	_game_state = GAME_SELECT;
 }
@@ -387,20 +396,20 @@ bool read_button(int key, int default_state)
 void wait_for_green_button_and_game_select()
 {
 	Serial.println("IDLE");
-	unsigned long started = millis();
+	idle_reset();
 
 	// Wait for green button to be pressed
 	digitalWrite(LED_GREEN, HIGH);
 	// FIXME: Do we need to turn GREEN off???
 	while (!read_button(BUTTON_GREEN, LOW))
 	{
-		if ((millis() - started) > 10L * 1000L)
+		if (idle_true())
 		{
 			_game_state = GAME_IDLE;
 			return;
 		}
+		_game_state = GAME_SELECT;
 	}
-	_game_state = GAME_SELECT;
 }
 
 void beep()
@@ -448,4 +457,16 @@ void smiley(const uint8_t x, const uint8_t y, const uint8_t size, const uint8_t 
 		uView.circle(x + 2 * eye_size, y - 2, eye_size, WHITE, NORM);
 		uView.display();
 	}
+}
+
+unsigned long _idle_started = 0;
+
+void idle_reset()
+{
+	_idle_started = millis();
+}
+
+bool idle_true()
+{
+	return (millis() - _idle_started) > 10L * 1000L;
 }
